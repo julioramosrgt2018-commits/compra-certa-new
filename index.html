@@ -43,7 +43,6 @@ gap: 10px;
 
 .header-icon { width: 32px; height: 32px; object-fit: contain; }
 
-/* MODIFICADO: Transformado de barra de rolagem para botões em grelha responsiva */
 .nav-tabs { 
 display: grid; 
 grid-template-columns: repeat(3, 1fr); 
@@ -93,6 +92,11 @@ button.secondary:hover { background: #4b5563; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
 th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
 th { color: var(--text-muted); }
+
+/* Estilos para alteração rápida de quantidade no carrinho */
+.qtd-control { display: flex; align-items: center; gap: 5px; }
+.qtd-btn { background: #374151; color: #fff; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; font-size: 0.9rem; }
+.qtd-btn:hover { background: var(--primary); }
 
 #reader { width: 100%; max-height: 300px; background: #000; border-radius: 6px; overflow: hidden; margin-bottom: 10px; display: none; }
 .preview-img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border); margin-top: 10px; display: none; background: #000; }
@@ -243,7 +247,8 @@ Compra Certa
 <!-- ABA PREÇOS -->
 <div id="precos" class="tab-content">
 <div class="card">
-<h3>📊 Comparador de Preços Ativo</h3>
+<h3>📊 Comparador e Validação de Preços</h3>
+<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">Validação inteligente comparando o preço atual com o histórico registado:</p>
 <div id="comparadorContainer"></div>
 </div>
 </div>
@@ -341,6 +346,17 @@ document.getElementById('qtdInput').value = '1';
 document.getElementById('statusLeitura').innerText = '';
 }
 
+function alterarQtd(index, delta) {
+if (carrinho[index]) {
+carrinho[index].qtd += delta;
+if (carrinho[index].qtd <= 0) {
+carrinho.splice(index, 1);
+}
+salvarDados();
+renderCarrinho();
+}
+}
+
 function renderCarrinho() {
 const tbody = document.getElementById('tabelaCarrinho');
 if (!tbody) return;
@@ -353,7 +369,7 @@ totalGeral += totalItem;
 const codigoHtml = item.codigo ? '<br><small style="color:var(--text-muted)">Cód: ' + item.codigo + '</small>' : '';
 tbody.innerHTML += '<tr>' +
 '<td><strong>' + item.produto + '</strong>' + codigoHtml + '</td>' +
-'<td>' + item.qtd + '</td>' +
+'<td><div class="qtd-control"><button type="button" class="qtd-btn" onclick="alterarQtd(' + index + ', -1)">-</button><span>' + item.qtd + '</span><button type="button" class="qtd-btn" onclick="alterarQtd(' + index + ', 1)">+</button></div></td>' +
 '<td>' + formatarMoeda(totalItem) + '</td>' +
 '<td><button type="button" onclick="removerItem(' + index + ')" class="danger" style="padding:4px 8px; font-size:0.8rem;">X</button></td>' +
 '</tr>';
@@ -667,37 +683,42 @@ if (codigo) buscarDescricaoProduto(codigo);
 });
 
 /* ============================
-COMPARADOR DE PREÇOS
+COMPARADOR E VALIDAÇÃO DE PREÇOS
 ============================ */
 function carregarComparador() {
 const container = document.getElementById('comparadorContainer');
 if (!container) return;
-if (carrinho.length === 0 && historicoProdutos.length === 0) {
-container.innerHTML = '<p style="color:var(--text-muted)">Adicione itens no carrinho ou tenha histórico para comparar preços.</p>';
+if (carrinho.length === 0) {
+container.innerHTML = '<p style="color:var(--text-muted)">Adicione itens no carrinho para ver a validação e comparação de preços.</p>';
 return;
 }
 
-const precosPorProduto = {};
+let html = '<table><thead><tr><th>Produto / Carrinho</th><th>Estado / Divergência</th></tr></thead><tbody>';
 
 carrinho.forEach(function(item) {
-const prod = item.produto.toLowerCase();
-if (!precosPorProduto[prod]) precosPorProduto[prod] = {};
-precosPorProduto[prod][item.mercado] = item.preco;
-});
+const prodNome = item.produto.toLowerCase();
+const historicoMatch = historicoProdutos.find(p => p.produto.toLowerCase() === prodNome);
 
-if (Object.keys(precosPorProduto).length === 0) {
-container.innerHTML = '<p style="color:var(--text-muted)">Sem dados suficientes no carrinho atual para o comparador.</p>';
-return;
+let statusHtml = '';
+if (!historicoMatch || !historicoMatch.precoSugestao) {
+statusHtml = '<span style="color:var(--accent);">✔ Sem histórico prévio (' + formatarMoeda(item.preco) + ')</span>';
+} else {
+const precoAnterior = historicoMatch.precoSugestao;
+const diferenca = item.preco - precoAnterior;
+const percentual = (diferenca / precoAnterior) * 100;
+
+if (item.preco <= precoAnterior) {
+statusHtml = '<span style="color:var(--success);">✅ Preço OK (' + formatarMoeda(item.preco) + ') - Abaixo ou igual ao histórico (' + formatarMoeda(precoAnterior) + ')</span>';
+} else if (percentual <= 20) {
+statusHtml = '<span style="color:var(--warning);">⚠️ Leve Alta (' + formatarMoeda(item.preco) + ') - Histórico: ' + formatarMoeda(precoAnterior) + '</span>';
+} else {
+statusHtml = '<span style="color:var(--danger);">❌ Divergência Crítica! Preço atual (' + formatarMoeda(item.preco) + ') muito acima do histórico (' + formatarMoeda(precoAnterior) + ')</span>';
+}
 }
 
-let html = '<table><thead><tr><th>Produto</th><th>Melhor Preço / Mercado</th></tr></thead><tbody>';
-for (const prod in precosPorProduto) {
-const mercados = precosPorProduto[prod];
-const melhorMercado = Object.keys(mercados).reduce(function(a, b) {
-return mercados[a] < mercados[b] ? a : b;
+html += '<tr><td><strong>' + item.produto + '</strong><br><small style="color:var(--text-muted)">' + item.mercado + ' (Qtd: ' + item.qtd + ')</small></td><td>' + statusHtml + '</td></tr>';
 });
-html += '<tr><td><strong>' + prod + '</strong></td><td>' + formatarMoeda(mercados[melhorMercado]) + ' (' + melhorMercado + ')</td></tr>';
-}
+
 html += '</tbody></table>';
 container.innerHTML = html;
 }
