@@ -24,7 +24,7 @@
 --success: #16a34a;
 --warning: #d97706;
 }
-• { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
 body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 70px; }
 
 header {
@@ -43,9 +43,31 @@ gap: 10px;
 
 .header-icon { width: 32px; height: 32px; object-fit: contain; }
 
-.nav-tabs { display: flex; overflow-x: auto; background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 5px; gap: 5px; position: sticky; top: 0; z-index: 100; }
-.nav-tab { background: transparent; border: none; color: var(--text-muted); padding: 10px 15px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; border-radius: 4px; transition: 0.2s; flex: 0 0 auto; }
-.nav-tab.active { background: var(--primary); color: #fff; font-weight: bold; }
+/* MODIFICADO: Transformado de barra de rolagem para botões em grelha responsiva */
+.nav-tabs { 
+display: grid; 
+grid-template-columns: repeat(3, 1fr); 
+background: var(--card-bg); 
+border-bottom: 1px solid var(--border); 
+padding: 8px; 
+gap: 6px; 
+position: sticky; 
+top: 0; 
+z-index: 100; 
+}
+.nav-tab { 
+background: #2a2a2a; 
+border: 1px solid var(--border); 
+color: var(--text-muted); 
+padding: 10px 5px; 
+cursor: pointer; 
+font-size: 0.85rem; 
+text-align: center; 
+white-space: nowrap; 
+border-radius: 6px; 
+transition: 0.2s; 
+}
+.nav-tab.active { background: var(--primary); color: #fff; font-weight: bold; border-color: var(--primary-hover); }
 
 .container { padding: 15px; max-width: 600px; margin: 0 auto; }
 .tab-content { display: none; }
@@ -93,7 +115,7 @@ Compra Certa
 </header>
 
 <div class="nav-tabs">
-<button type="button" class="nav-tab active" onclick="switchTab('compra', this)">Compra</button>
+<button type="button" class="nav-tab active" onclick="switchTab('compra', this)">🛒 Compra</button>
 <button type="button" class="nav-tab" onclick="switchTab('beneficios', this)">💳 Benefícios</button>
 <button type="button" class="nav-tab" onclick="switchTab('lista', this)">📋 Lista</button>
 <button type="button" class="nav-tab" onclick="switchTab('validade', this)">📅 Validade</button>
@@ -131,7 +153,7 @@ Compra Certa
 <input type="number" id="qtdInput" value="1" min="1">
 </div>
 <div>
-<label for="precoInput">Preço Unitário (R$`):</label>
+<label for="precoInput">Preço Unitário (R$):</label>
 <input type="number" step="0.01" id="precoInput" placeholder="0.00">
 </div>
 </div>
@@ -147,7 +169,7 @@ Compra Certa
 </thead>
 <tbody id="tabelaCarrinho"></tbody>
 </table>
-<h3 style="margin-top: 15px; text-align: right;" id="totalCarrinhoTxt">Total: R`$ 0,00</h3>
+<h3 style="margin-top: 15px; text-align: right;" id="totalCarrinhoTxt">Total: R$ 0,00</h3>
 
 <div style="margin-top: 15px;">
 <label for="cartaoDescontoInput" style="font-size: 0.9rem; color: var(--accent);">Descontar total da compra de:</label>
@@ -170,14 +192,15 @@ Compra Certa
 <option value="Alimentação">Alimentação</option>
 <option value="Refeição">Refeição</option>
 </select>
-<label for="saldoBeneficioInput">Valor Atual do Saldo (R$`):</label>
+<label for="saldoBeneficioInput">Valor Atual do Saldo (R$):</label>
 <input type="number" step="0.01" id="saldoBeneficioInput" placeholder="0.00">
 <button type="button" onclick="salvarSaldoBeneficio()">💾 Salvar Saldo</button>
 </div>
 
 <div class="card">
 <h3>📈 Saldos Atuais</h3>
-<p class="saldo-display"><strong>Alimentação:</strong> <span id="displayAlimentacao">R$ 0,00&lt;/span&gt;&lt;/p&gt; &lt;p class="saldo-display" style="margin-top: 8px;"&gt;&lt;strong&gt;Refeição:&lt;/strong&gt; &lt;span id="displayRefeicao"&gt;R$ 0,00</span></p>
+<p class="saldo-display"><strong>Alimentação:</strong> <span id="displayAlimentacao">R$ 0,00</span></p>
+<p class="saldo-display" style="margin-top: 8px;"><strong>Refeição:</strong> <span id="displayRefeicao">R$ 0,00</span></p>
 </div>
 </div>
 
@@ -273,7 +296,7 @@ localStorage.setItem('cc_historico', JSON.stringify(historicoProdutos));
 }
 
 function formatarMoeda(valor) {
-return 'R`$ ' + Number(valor || 0).toFixed(2).replace('.', ',');
+return 'R$ ' + Number(valor || 0).toFixed(2).replace('.', ',');
 }
 
 /* ============================
@@ -602,11 +625,9 @@ pararScanner();
 buscarDescricaoProduto(codigo);
 }
 
-/* NOVO: preencher a descrição automaticamente após a leitura */
 async function buscarDescricaoProduto(codigo) {
 if (!codigo) return;
 
-// 1) Procura no histórico local do próprio usuário
 const local = historicoProdutos.find(function(p) {
 return p.codigo && p.codigo.trim() === codigo;
 });
@@ -617,7 +638,6 @@ setStatusLeitura('Produto reconhecido no seu histórico: ' + local.produto);
 return;
 }
 
-// 2) Consulta a base Open Food Facts (gratuita) para códigos EAN/UPC numéricos
 if (/^\d{8,14}$/.test(codigo)) {
 setStatusLeitura('Consultando descrição do produto na base de dados...');
 try {
@@ -641,7 +661,6 @@ return;
 setStatusLeitura('Código lido: ' + codigo + '. Digite a descrição do produto.');
 }
 
-// Se o usuário digitar o código manualmente, também tenta preencher ao sair do campo
 document.getElementById('codigoBarrasInput').addEventListener('change', function() {
 const codigo = this.value.trim();
 if (codigo) buscarDescricaoProduto(codigo);
